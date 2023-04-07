@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use reqwest;
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
@@ -7,6 +7,7 @@ use std::str::FromStr;
 use url::Url;
 
 use super::error::AlphaVantageError;
+use crate::data::{AssetTradeInfo, TimeSeries};
 
 const API_BASE_URL: &str = "https://alphavantage.co/query";
 const TIME_SERIES_DAILY: &str = "TIME_SERIES_DAILY";
@@ -17,121 +18,168 @@ const TIME_SERIES_MONTHLY: &str = "TIME_SERIES_MONTHLY";
 const TIME_SERIES_MONTHLY_ADJUSTED: &str = "TIME_SERIES_MONTHLY_ADJUSTED";
 
 #[derive(Deserialize, Debug)]
-pub struct MetaData {
+struct MetaData {
     #[serde(rename = "1. Information")]
-    pub information: String,
+    information: String,
     #[serde(rename = "2. Symbol")]
-    pub symbol: String,
+    symbol: String,
     #[serde(rename = "3. Last Refreshed")]
-    pub last_refreshed: String,
+    last_refreshed: String,
     #[serde(rename = "4. Time Zone")]
-    pub tz: String,
+    tz: String,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct MetaDataWithOutputSize {
+struct MetaDataWithOutputSize {
     #[serde(rename = "1. Information")]
-    pub information: String,
+    information: String,
     #[serde(rename = "2. Symbol")]
-    pub symbol: String,
+    symbol: String,
     #[serde(rename = "3. Last Refreshed")]
-    pub last_refreshed: String,
+    last_refreshed: String,
     #[serde(rename = "4. Output Size")]
-    pub size: String,
+    size: String,
     #[serde(rename = "5. Time Zone")]
-    pub tz: String,
+    tz: String,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PriceInfo {
+struct PriceInfo {
     #[serde(rename = "1. open", deserialize_with = "deserialize_from_str")]
-    pub open: f64,
+    open: f64,
     #[serde(rename = "2. high", deserialize_with = "deserialize_from_str")]
-    pub high: f64,
+    high: f64,
     #[serde(rename = "3. low", deserialize_with = "deserialize_from_str")]
-    pub low: f64,
+    low: f64,
     #[serde(rename = "4. close", deserialize_with = "deserialize_from_str")]
-    pub close: f64,
+    close: f64,
     #[serde(rename = "5. volume", deserialize_with = "deserialize_from_str")]
-    pub volume: i64,
+    volume: i64,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct AdjustedPriceInfo {
+struct AdjustedPriceInfo {
     #[serde(rename = "1. open", deserialize_with = "deserialize_from_str")]
-    pub open: f64,
+    open: f64,
     #[serde(rename = "2. high", deserialize_with = "deserialize_from_str")]
-    pub high: f64,
+    high: f64,
     #[serde(rename = "3. low", deserialize_with = "deserialize_from_str")]
-    pub low: f64,
+    low: f64,
     #[serde(rename = "4. close", deserialize_with = "deserialize_from_str")]
-    pub close: f64,
+    close: f64,
     #[serde(
         rename = "5. adjusted close",
         deserialize_with = "deserialize_from_str"
     )]
-    pub adjusted_close: f64,
+    adjusted_close: f64,
     #[serde(rename = "6. volume", deserialize_with = "deserialize_from_str")]
-    pub volume: i64,
+    volume: i64,
     #[serde(
         rename = "7. dividend amount",
         deserialize_with = "deserialize_from_str"
     )]
-    pub dividend: f64,
+    dividend: f64,
     #[serde(
         rename = "8. split coefficient",
         deserialize_with = "deserialize_from_str",
         default
     )]
-    pub split_coefficient: f64,
+    split_coefficient: f64,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesDailyResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaDataWithOutputSize,
+    metadata: MetaDataWithOutputSize,
     #[serde(rename = "Time Series (Daily)")]
-    pub prices: HashMap<NaiveDate, PriceInfo>,
+    prices: HashMap<NaiveDate, PriceInfo>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesDailyAdjustedResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaDataWithOutputSize,
+    metadata: MetaDataWithOutputSize,
     #[serde(rename = "Time Series (Daily)")]
-    pub prices: HashMap<NaiveDate, AdjustedPriceInfo>,
+    prices: HashMap<NaiveDate, AdjustedPriceInfo>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesWeeklyResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaData,
+    metadata: MetaData,
     #[serde(rename = "Weekly Time Series")]
-    pub prices: HashMap<NaiveDate, PriceInfo>,
+    prices: HashMap<NaiveDate, PriceInfo>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesWeeklyAdjustedResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaData,
+    metadata: MetaData,
     #[serde(rename = "Weekly Adjusted Time Series")]
-    pub prices: HashMap<NaiveDate, AdjustedPriceInfo>,
+    prices: HashMap<NaiveDate, AdjustedPriceInfo>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesMonthlyResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaData,
+    metadata: MetaData,
     #[serde(rename = "Monthly Time Series")]
-    pub prices: HashMap<NaiveDate, PriceInfo>,
+    prices: HashMap<NaiveDate, PriceInfo>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct TimeSeriesMonthlyAdjustedResponse {
     #[serde(rename = "Meta Data")]
-    pub metadata: MetaData,
+    metadata: MetaData,
     #[serde(rename = "Monthly Adjusted Time Series")]
-    pub prices: HashMap<NaiveDate, AdjustedPriceInfo>,
+    prices: HashMap<NaiveDate, AdjustedPriceInfo>,
+}
+
+impl Into<TimeSeries> for TimeSeriesDailyResponse {
+    fn into(self) -> TimeSeries {
+        let asset_info = self
+            .prices
+            .into_iter()
+            .map(|(date, info)| {
+                AssetTradeInfo::new(
+                    naive_date_to_datetime_utc(date),
+                    info.open,
+                    info.high,
+                    info.low,
+                    info.close,
+                    info.volume,
+                )
+            })
+            .collect();
+        TimeSeries::new(asset_info, Duration::days(1))
+    }
+}
+
+impl Into<TimeSeries> for TimeSeriesMonthlyAdjustedResponse {
+    fn into(self) -> TimeSeries {
+        let asset_info = self
+            .prices
+            .into_iter()
+            .map(|(date, info)| {
+                AssetTradeInfo::new(
+                    naive_date_to_datetime_utc(date),
+                    info.open,
+                    info.high,
+                    info.low,
+                    info.close,
+                    info.volume,
+                )
+            })
+            .collect();
+        TimeSeries::new(asset_info, Duration::days(1))
+    }
+}
+
+fn naive_date_to_datetime_utc(date: NaiveDate) -> DateTime<Utc> {
+    let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+    let dt = NaiveDateTime::new(date, time);
+
+    Utc.from_utc_datetime(&dt)
 }
 
 fn deserialize_from_str<'de, S, D>(deserializer: D) -> Result<S, D::Error>

@@ -1,23 +1,43 @@
 use chrono::{DateTime, Duration, Utc};
 
 #[derive(Debug)]
-pub struct PricePoint {
+pub struct AssetTradeInfo {
     timestamp: DateTime<Utc>,
-    open: i64,
-    high: i64,
-    low: i64,
-    close: i64,
+    open: f64,
+    high: f64,
+    low: f64,
+    close: f64,
     volume: i64,
+}
+
+impl AssetTradeInfo {
+    pub fn new(
+        timestamp: DateTime<Utc>,
+        open: f64,
+        high: f64,
+        low: f64,
+        close: f64,
+        volume: i64,
+    ) -> AssetTradeInfo {
+        AssetTradeInfo {
+            timestamp,
+            open,
+            high,
+            low,
+            close,
+            volume,
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct TimeSeries {
-    data: Vec<PricePoint>,
+    data: Vec<AssetTradeInfo>,
     interval: Duration,
 }
 
 impl TimeSeries {
-    pub fn new(data: Vec<PricePoint>, interval: Duration) -> TimeSeries {
+    pub fn new(data: Vec<AssetTradeInfo>, interval: Duration) -> TimeSeries {
         TimeSeries { data, interval }
     }
 }

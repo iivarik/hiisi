@@ -1,10 +1,12 @@
 use hiisi::alpha_vantage::api::Client;
+use hiisi::data::TimeSeries;
 
 fn main() {
     let api = Client::new("QYSZ8L88IKLHCTHP");
-    let timeseries = api.get_time_series_monthly_adjusted("AAPL", false).unwrap();
+    let timeseries: TimeSeries = api
+        .get_time_series_monthly_adjusted("AAPL", false)
+        .unwrap()
+        .into();
 
-    for (date, price_info) in timeseries.prices.iter() {
-        println!("Date: {:?} Volume: {:?}", date, price_info.volume);
-    }
+    println!("TimeSeries: {:?}", timeseries);
 }
